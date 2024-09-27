@@ -10,17 +10,51 @@ services:
       - "5000:80"    # HTTP
       - "5001:443"   # HTTPS
     volumes:
-      - ./logs:/app/logs  # Map logs directory to the host\
+      - ./logs:/app/logs  # Map logs directory to the host
       - ./certs:/https
+      - ./file_directory/todos/source:/file_directory/todos/source  # Persist the files in the host directory
     environment:
       - ASPNETCORE_ENVIRONMENT=Development
       - ASPNETCORE_URLS=https://+:443;http://+:80  # Listen on both HTTP and HTTPS
       - ASPNETCORE_Kestrel__Certificates__Default__Path=/https/aspnetapp.pfx  # Path to certificate inside container
-      - ASPNETCORE_Kestrel__Certificates__Default__Password=Yana12242012!       # Certificate password
+      - ASPNETCORE_Kestrel__Certificates__Default__Password=Yana12242012!
       - APPSETTINGS__AzureCredentials__ClientId=f4e52f6a-c3ec-4645-88c2-8986e2a8be48
       - APPSETTINGS__AzureCredentials__ClientSecret=UFQ8Q~NU5eDxhzjWBokGC4z36IZCmYmOfaH9EcsW
       - APPSETTINGS__AzureCredentials__TenantId=1bdf3941-cf5c-43bd-a688-847a718cfda0
       - APPSETTINGS__AzureKeyVault__KeyVaultName=mytodoskv
       - APPSETTINGS__AzureKeyVault__KeyVaultUrl=https://mytodoskv.vault.azure.net/
       - APPSETTINGS__AzureKeyVault__TodoDbSecretName=SqlConnectionString
-  
+      - APPSETTINGS__FileDirectory__Source=/file_directory/todos/source
+  todos.web:
+    image: ${DOCKER_REGISTRY-}todosweb
+    build:
+      context: .
+      dockerfile: todos.web/Dockerfile   # Specify path to your Dockerfile for React app
+    ports:
+      - "3000:80"    # Expose HTTP
+      - "3001:443"   # Expose HTTPS
+    volumes:
+      - ./certs:/etc/nginx/certs  # Shared certificate directory (same as todos.api)
+      - ./todos.web/build:/usr/share/nginx/html  # Serve the built React app
+    environment:
+      - NODE_ENV=production  # Ensure React app runs in production mode
+    depends_on:
+      - todos.api
+  todos.service:
+    image: ${DOCKER_REGISTRY-}todoservice
+    build:
+      context: .
+      dockerfile: todos.service/Dockerfile   # Specify path to your Dockerfile for React app
+    volumes:
+      - ./file_directory/todos/source:/file_directory/todos/source  # Persist the files in the host directory
+      - ./file_directory/todos/destination:/file_directory/todos/destination  # Persist the files in the host directory
+    environment:
+      - APPSETTINGS__AzureCredentials__ClientId=f4e52f6a-c3ec-4645-88c2-8986e2a8be48
+      - APPSETTINGS__AzureCredentials__ClientSecret=UFQ8Q~NU5eDxhzjWBokGC4z36IZCmYmOfaH9EcsW
+      - APPSETTINGS__AzureCredentials__TenantId=1bdf3941-cf5c-43bd-a688-847a718cfda0
+      - APPSETTINGS__AzureKeyVault__KeyVaultName=mytodoskv
+      - APPSETTINGS__AzureKeyVault__KeyVaultUrl=https://mytodoskv.vault.azure.net/
+      - APPSETTINGS__AzureKeyVault__TodoDbSecretName=SqlConnectionString
+      - APPSETTINGS__FileDirectory__Source=/file_directory/todos/source
+      - APPSETTINGS__FileDirectory__Destination=/file_directory/todos/destination
+    

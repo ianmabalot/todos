@@ -3,6 +3,8 @@ using Microsoft.EntityFrameworkCore;
 using todos.api.Data;
 using todos.api.Models;
 using Microsoft.Extensions.Logging;
+using todos.api.Common;
+using Microsoft.Extensions.Options;
 
 namespace todos.api.Controllers
 {
@@ -12,15 +14,18 @@ namespace todos.api.Controllers
     {
         private readonly AppDbContext _context;
         private readonly ILogger<TodosController> _logger;
-        public TodosController(AppDbContext context, ILogger<TodosController> logger)
+        private readonly AppSettings _appSettings;
+        public TodosController(AppDbContext context, ILogger<TodosController> logger, IOptions<AppSettings> appSettings)
         {
             _context = context;
             _logger = logger;
+            _appSettings = appSettings.Value;
         }
 
         [HttpGet]
         public async Task<ActionResult<IEnumerable<Todo>>> GetTodos()
         {
+            //var source = _appSettings.FileDirectory.Source;
             var todos = await _context.Todos.ToListAsync();
             return Ok(todos);
         }
@@ -28,11 +33,24 @@ namespace todos.api.Controllers
         [HttpPost]
         public async Task<ActionResult<Todo>> AddTodo([FromBody] Todo newTodo)
         {
-            // Add the new Todo to the database
-            _context.Todos.Add(newTodo);
-            await _context.SaveChangesAsync();
+            var source = _appSettings.FileDirectory.Source;
 
-            _logger.LogInformation("Added new todo...");
+            var guid = Guid.NewGuid().ToString();
+
+            var filePath = Path.Combine(source, $"{guid}.txt");
+
+            var todoContent = $"Title: {newTodo.Title}";
+
+            // Ensure the directory exists
+            if (!Directory.Exists(source))
+            {
+                Directory.CreateDirectory(source);
+            }
+
+            // Write contents to the file
+            await System.IO.File.WriteAllTextAsync(filePath, todoContent);
+
+            _logger.LogInformation("created file for new todo...");
 
             return CreatedAtAction(nameof(GetTodos), new { id = newTodo.Id}, newTodo);  
         }

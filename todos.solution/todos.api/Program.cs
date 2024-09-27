@@ -8,6 +8,19 @@ using Serilog;
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddControllers();
+
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("AllowAllOrigins",
+        builder =>
+        {
+            builder.AllowAnyOrigin()
+                   .AllowAnyMethod()
+                   .AllowAnyHeader();
+        });
+});
+
+
 builder.Services.AddMemoryCache();
 builder.Services.AddLogging();
 builder.Services.AddEndpointsApiExplorer();
@@ -77,7 +90,10 @@ if (app.Environment.IsDevelopment())
 
 app.UseHttpsRedirection();
 
-//app.UseSerilogRequestLogging();
+
+app.UseCors("AllowAllOrigins");
+
+app.UseSerilogRequestLogging();
 
 app.UseAuthorization();
 

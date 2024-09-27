@@ -29,7 +29,7 @@ FROM base AS final
 # Copy certificate for HTTPS (make sure this exists in your local directory)
 COPY certs/aspnetapp.pfx /https/aspnetapp.pfx
 
-# Copy the published application to the final container
+# Copy the published application to the final container	
 COPY --from=publish /app/publish .
 
 # Switch to non-root user for better security
